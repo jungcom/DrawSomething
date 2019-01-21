@@ -8,59 +8,62 @@
 
 import UIKit
 
-class Canvas: UIView {
-    var lines = [[CGPoint]]()
-    
-    override func draw(_ rect: CGRect) {
-        super.draw(rect)
-        
-        guard let context = UIGraphicsGetCurrentContext() else { return }
-        
-        context.setStrokeColor(UIColor.red.cgColor)
-        context.setLineWidth(10)
-        context.setLineCap(.round)
-        
-        //Draw the lines 
-        lines.forEach { (line) in
-            for (i,p) in line.enumerated(){
-                if i == 0{
-                    context.move(to: p)
-                } else {
-                    context.addLine(to: p)
-                }
-            }
-        }
-
-        context.strokePath()
-    }
-    
-    //track movement
-    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard let point = touches.first?.location(in: nil) else {return}
-        
-        //Get the last line, add the current point, and add it back to the lines array
-        guard var lastline = lines.popLast() else {return}
-        lastline.append(point)
-        lines.append(lastline)
-        
-        setNeedsDisplay()
-    }
-    
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        //add a new line when touches begin
-        lines.append([CGPoint]())
-    }
-}
-
 class ViewController: UIViewController {
 
+    let canvas = Canvas()
+    
+    var stackView : UIStackView!
+    
+    let undoButton : UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("Undo", for: .normal)
+        button.titleLabel?.font = UIFont.boldSystemFont(ofSize: 16)
+        button.addTarget(self, action: #selector(handleUndo), for: .touchUpInside)
+        return button
+    }()
+    
+    let clearButton : UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("Clear", for: .normal)
+        button.titleLabel?.font = UIFont.boldSystemFont(ofSize: 16)
+        button.addTarget(self, action: #selector(handleClear), for: .touchUpInside)
+
+        return button
+    }()
+    
+    override func loadView() {
+        view = canvas
+    }
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
-        let canvas = Canvas()
+        
         canvas.backgroundColor = .white
-        view.addSubview(canvas)
-        canvas.frame = view.frame
+        
+        setConstraints()
+        
+    }
+    
+    func setConstraints(){
+        stackView = UIStackView(arrangedSubviews: [undoButton, clearButton])
+        stackView.axis = .horizontal
+        stackView.distribution = .fillEqually
+        
+        view.addSubview(stackView)
+        
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        stackView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor).isActive = true
+        stackView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor).isActive = true
+        stackView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor).isActive = true
+    }
+    
+    @objc func handleUndo(){
+        canvas.undo()
+    }
+    
+    @objc func handleClear(){
+        canvas.clear()
     }
 
 
